@@ -1,4 +1,4 @@
-﻿namespace Assets.Script
+﻿namespace Assets.Script.Models
 {
     public static class FaceBitMask
     {

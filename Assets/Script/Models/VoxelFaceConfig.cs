@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Assets.Script
+namespace Assets.Script.Models
 {
     public class VoxelFaceConfig
     {
@@ -8,8 +8,9 @@ namespace Assets.Script
         private readonly Vector2[] uv = new Vector2[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
         private Vector3[][] FaceVerticesMap;
 
-        public VoxelFaceConfig(int voxelSize)
+        public VoxelFaceConfig()
         {
+            const float voxelSize = 1;
             float front, right, top, back, left, bottom;
             front = right = top = voxelSize / 2f;
             back = left = bottom = -voxelSize / 2f;

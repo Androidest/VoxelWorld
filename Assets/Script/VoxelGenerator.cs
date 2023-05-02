@@ -1,4 +1,5 @@
-using Assets.Script;
+using Assets.Script.Manager;
+using Assets.Script.Models;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,9 +8,7 @@ using UnityEngine;
 [RequireComponent(typeof(MeshRenderer))]
 public class VoxelGenerator : MonoBehaviour
 {
-    private static readonly VoxelConfig VoxelConfig = new VoxelConfig(voxelSize: 1, texTiles: 10);
-    private static readonly FastNoiseLite Noise = new FastNoiseLite(1337);
-
+    private FastNoiseLite Noise = new FastNoiseLite();
     const int ChunkSize = 32;
     const int ChunkHeight = 24;
     const int FrameRate = 30;
@@ -21,6 +20,7 @@ public class VoxelGenerator : MonoBehaviour
 
     void Start()
     {
+        Noise.SetSeed(ConfigManager.Instance.Seed);
         StartX = (int)transform.position.x;
         StartZ = (int)transform.position.z;
 
@@ -32,6 +32,7 @@ public class VoxelGenerator : MonoBehaviour
     {
         int size = ChunkSize + 2;
         HeightMap = new int[size, size];
+        
         for (int x = 0; x < size; ++x)
         {
             for (int z = 0; z < size; ++z)
@@ -46,12 +47,26 @@ public class VoxelGenerator : MonoBehaviour
         return HeightMap[x + 1, z + 1] >= y;
     }
 
+    EBlockType GetBlockType(int x, int y, int z)
+    {
+        if (!IsSolid(x, y, z))
+            return EBlockType.None;
+
+        if (y > 20)
+            return EBlockType.Snow;
+        else if (y > 8)
+            return EBlockType.Grass;
+        else
+            return EBlockType.Sand;
+    }
+
     IEnumerator LazyGenerateChunk()
     {
         float nextInterruptTime = Time.realtimeSinceStartup + LazyLoadingTimePerFrame;
         int vertexCount = 0;
         int triangleCount = 0;
         var meshDataList = new List<(Vector3, MeshData)>();
+        var voxelConfig = ConfigManager.Instance.VoxelConfig;
 
         for (int x = 0; x < ChunkSize; ++x)
         {
@@ -59,21 +74,22 @@ public class VoxelGenerator : MonoBehaviour
             {
                 for (int y = 0; y < ChunkHeight; ++y)
                 {
-                    if (!IsSolid(x, y, z))
+                    var blockType = GetBlockType(x, y, z);
+                    if (blockType == EBlockType.None)
                         continue;
 
-                    int voxelType = 0;
-                    if (IsSolid(x, y, z + 1)) voxelType |= FaceBitMask.Front;
-                    if (IsSolid(x, y, z - 1)) voxelType |= FaceBitMask.Back;
-                    if (IsSolid(x - 1, y, z)) voxelType |= FaceBitMask.Left;
-                    if (IsSolid(x + 1, y, z)) voxelType |= FaceBitMask.Right;
-                    if (IsSolid(x, y + 1, z)) voxelType |= FaceBitMask.Top;
-                    if (IsSolid(x, y - 1, z)) voxelType |= FaceBitMask.Bottom;
+                    int meshType = 0;
+                    if (IsSolid(x, y, z + 1)) meshType |= FaceBitMask.Front;
+                    if (IsSolid(x, y, z - 1)) meshType |= FaceBitMask.Back;
+                    if (IsSolid(x - 1, y, z)) meshType |= FaceBitMask.Left;
+                    if (IsSolid(x + 1, y, z)) meshType |= FaceBitMask.Right;
+                    if (IsSolid(x, y + 1, z)) meshType |= FaceBitMask.Top;
+                    if (IsSolid(x, y - 1, z)) meshType |= FaceBitMask.Bottom;
 
-                    if (voxelType == VoxelConfig.EMPTY_MESH_TYPE)
+                    if (meshType == VoxelConfig.EMPTY_MESH_TYPE)
                         continue;
 
-                    var meshData = VoxelConfig.GetMeshData(voxelType);
+                    var meshData = voxelConfig.GetMeshData(blockType, meshType);
                     meshDataList.Add((new Vector3(x, y, z), meshData));
                     vertexCount += meshData.vertices.Length;
                     triangleCount += meshData.triangles.Length;
