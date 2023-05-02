@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(MeshCollider))]
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
 public class VoxelGenerator : MonoBehaviour
@@ -137,6 +138,7 @@ public class VoxelGenerator : MonoBehaviour
             }
         }
 
+        // mesh
         var mf = GetComponent<MeshFilter>();
         Mesh mesh = new Mesh
         {
@@ -146,6 +148,17 @@ public class VoxelGenerator : MonoBehaviour
         };
         mesh.RecalculateNormals();
         mf.mesh = mesh;
+
+        // collier mesh
+        var collider = GetComponent<MeshCollider>();
+        Mesh colliderMesh = new Mesh
+        {
+            vertices = vertices,
+            triangles = triangles,
+            uv = uv
+        };
+        colliderMesh.RecalculateNormals();
+        collider.sharedMesh = colliderMesh;
     }
 
     void Update()
