@@ -26,10 +26,6 @@ namespace Assets.Script.Manager
             }
         }
 
-        public void Load()
-        {
-        }
-
         public void Start()
         {
             targetPlayer = GameManager.Instance.CurPlayerController;
