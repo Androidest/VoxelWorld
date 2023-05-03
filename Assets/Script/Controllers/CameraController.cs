@@ -5,17 +5,23 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     private Transform target;
-    private float moveSpeed = 20f;
+    private float moveSpeed = 10f;
     private float verticalRotateSpeed = 5f;
     private float horizontalRotateSpeed = 5f;
     private Transform visualCenter;
     private Transform mainCamera;
+    private Vector3 eulerAngle;
+    private Vector3 camLocalPos;
+
     public MouseCommand Command;
 
     private void Start()
     {
         visualCenter = transform.Find("VisualCenter");
         mainCamera = transform.Find("VisualCenter/MainCamera");
+        eulerAngle = Vector3.zero;
+        camLocalPos = mainCamera.localPosition;
+        transform.position = target.position;
     }
 
     public void SetTarget(Transform trans)
@@ -23,12 +29,37 @@ public class CameraController : MonoBehaviour
         target = trans;
     }
 
+    void ApplyRotation()
+    {
+        eulerAngle = eulerAngle + new Vector3(-Command.deltaY * verticalRotateSpeed, Command.deltaX * horizontalRotateSpeed, 0);
+        eulerAngle.x = Mathf.Clamp(eulerAngle.x, -Consts.CameraAngleLimitX, Consts.CameraAngleLimitX);
+        visualCenter.eulerAngles = eulerAngle;
+    }
+
+    void FollowTarget()
+    {
+        transform.position = Vector3.Lerp(transform.position, target.position, moveSpeed * Time.deltaTime);
+    }
+
+    void ApplyThirdPersonCameraCollision()
+    {
+        var dir = -mainCamera.forward;
+        var layerMask = 1 << LayerMask.NameToLayer("Default");
+        if (Physics.Raycast(visualCenter.position, dir, out RaycastHit hit, Consts.MaxCamDistance, layerMask)) // Camera layer is 6
+        {
+            var distance = Mathf.Max(0, hit.distance - 0.5f);
+            camLocalPos.z = -distance;
+        }
+        mainCamera.localPosition = Vector3.Lerp(mainCamera.localPosition, camLocalPos, moveSpeed * Time.deltaTime);
+    }
+
     private void LateUpdate()
     {
         if (target != null && Command != null)
         {
-            visualCenter.eulerAngles = visualCenter.eulerAngles + new Vector3(-Command.deltaY * verticalRotateSpeed, Command.deltaX * horizontalRotateSpeed, 0);
-            transform.position = Vector3.Lerp(transform.position, target.position, moveSpeed * Time.deltaTime);
+            ApplyRotation();
+            FollowTarget();
+            ApplyThirdPersonCameraCollision();
         }
     }
 }
