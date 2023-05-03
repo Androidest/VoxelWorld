@@ -5,15 +5,14 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     private Transform target;
-    private float moveSpeed = 10f;
-    private float verticalRotateSpeed = 5f;
-    private float horizontalRotateSpeed = 5f;
+    private const float moveSpeed = 10f;
+    
     private Transform visualCenter;
     private Transform mainCamera;
     private Vector3 eulerAngle;
     private Vector3 camLocalPos;
 
-    public MouseCommand Command;
+    public CameraCommand Command;
 
     private void Start()
     {
@@ -31,7 +30,7 @@ public class CameraController : MonoBehaviour
 
     void ApplyRotation()
     {
-        eulerAngle = eulerAngle + new Vector3(-Command.deltaY * verticalRotateSpeed, Command.deltaX * horizontalRotateSpeed, 0);
+        eulerAngle = Command.CamAngle;
         eulerAngle.x = Mathf.Clamp(eulerAngle.x, -Consts.CameraAngleLimitX, Consts.CameraAngleLimitX);
         visualCenter.eulerAngles = eulerAngle;
     }

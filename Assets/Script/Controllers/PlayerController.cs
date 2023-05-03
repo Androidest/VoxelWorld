@@ -32,8 +32,7 @@ public class PlayerController : MonoBehaviour
 
         if (Command != null)
         {
-            dir.x = Command.DirX;
-            dir.z = Command.DirZ;
+            dir = Command.Dir;
 
             if (Command.IsJump && characterController.isGrounded)
                 ApplyJump();

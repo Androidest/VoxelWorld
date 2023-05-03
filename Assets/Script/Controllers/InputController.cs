@@ -1,3 +1,4 @@
+using Assets.Script.Manager;
 using Assets.Script.Models;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -9,7 +10,8 @@ public class InputController : MonoBehaviour
     public CameraController TargetCamera;
 
     private PlayerCommand playerCommand;
-    private MouseCommand mouseCommand;
+    private CameraCommand mouseCommand;
+    private Vector3 camAngle;
 
     public PlayerCommand CurCommand
     {
@@ -23,11 +25,11 @@ public class InputController : MonoBehaviour
 
     private void Awake()
     {
+
     }
 
     void Start()
     {
-        
     }
 
     private void SendCommand()
@@ -50,27 +52,32 @@ public class InputController : MonoBehaviour
         if (TargetPlayer == null)
             return;
 
-        mouseCommand = new MouseCommand
+        // mouse
+        var mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
+        camAngle += new Vector3(-mouseDelta.y * ConfigManager.Instance.VertCamSpeed, mouseDelta.x * ConfigManager.Instance.HorzCamSpeed, 0);
+        mouseCommand = new CameraCommand
         {
-            deltaX = Input.GetAxis("Mouse X"),
-            deltaY = Input.GetAxis("Mouse Y"),
+            MouseDelta = mouseDelta,
+            CamAngle = camAngle
         };
-
-        var h = Input.GetAxisRaw("Horizontal");
-        if (h != 0)
-        {
-            CurCommand.DirX = h;
-        }
-
-        var v = Input.GetAxisRaw("Vertical");
-        if (v != 0)
-        {
-            CurCommand.DirZ = v;
-        }
 
         if (Input.GetMouseButton(0) && !IsMouseOverUI && !isDraging)
         {
             CurCommand.IsAttack = true;
+        }
+
+        // movement
+        var v = Input.GetAxisRaw("Vertical");
+        var h = Input.GetAxisRaw("Horizontal");
+
+        if (h != 0 || v != 0)
+        {
+            var angle = camAngle.y * Consts.ToRadianMultiplier;
+            var s = Mathf.Sin(angle);
+            var c = Mathf.Cos(angle);
+            var camForwardDir = new Vector3(s * v, 0, c * v);
+            var camRightDir = new Vector3(c * h, 0, -s * h);
+            CurCommand.Dir = (camForwardDir + camRightDir).normalized;
         }
 
         if (Input.GetKeyDown(KeyCode.Space))
