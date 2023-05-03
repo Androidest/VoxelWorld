@@ -9,12 +9,11 @@ using UnityEngine;
 [RequireComponent(typeof(MeshRenderer))]
 public class ChunkController : MonoBehaviour
 {
-    private FastNoiseLite noise = new FastNoiseLite();
-    private const int chunkSize = 32;
-    private const int chunkHeight = 24;
     private const int frameRate = 30;
     private const float lazyLoadingPercentPerFrame = 0.2f;
     private const float lazyLoadingTimePerFrame = 1f / frameRate * lazyLoadingPercentPerFrame;
+
+    private FastNoiseLite noise = new FastNoiseLite();
     private int[,] heightMap;
     private int startX;
     private int startZ;
@@ -31,14 +30,14 @@ public class ChunkController : MonoBehaviour
 
     void GenerateHeightMap()
     {
-        int size = chunkSize + 2;
+        int size = Consts.ChunkSize + 2;
         heightMap = new int[size, size];
         
         for (int x = 0; x < size; ++x)
         {
             for (int z = 0; z < size; ++z)
             {
-                heightMap[x, z] = Mathf.FloorToInt((noise.GetNoise(x + startX, z + startZ) + 1f) * 0.5f * chunkHeight);
+                heightMap[x, z] = Mathf.FloorToInt((noise.GetNoise(x + startX, z + startZ) + 1f) * 0.5f * Consts.ChunkHeight);
             }
         }
     }
@@ -69,11 +68,11 @@ public class ChunkController : MonoBehaviour
         var meshDataList = new List<(Vector3, MeshData)>();
         var voxelConfig = ConfigManager.Instance.VoxelConfig;
 
-        for (int x = 0; x < chunkSize; ++x)
+        for (int x = 0; x < Consts.ChunkSize; ++x)
         {
-            for (int z = 0; z < chunkSize; ++z)
+            for (int z = 0; z < Consts.ChunkSize; ++z)
             {
-                for (int y = 0; y < chunkHeight; ++y)
+                for (int y = 0; y < Consts.ChunkHeight; ++y)
                 {
                     var blockType = GetBlockType(x, y, z);
                     if (blockType == EBlockType.None)
