@@ -8,12 +8,11 @@ public class PlayerController : MonoBehaviour
     private Animator animator;
     private CharacterController characterController;
 
-    private PlayerCommand command;
+    public PlayerCommand Command;
     private bool isAttacking = false;
     private Quaternion targetDirQuaternion = Quaternion.Euler(0, 0, 0);
     private Vector3 velocity = new Vector3(0, 0, 0);
 
-    public PlayerCommand Command { get => command; set=> command = value; }
 
     private void Awake()
     {
@@ -31,24 +30,25 @@ public class PlayerController : MonoBehaviour
         var dir = Vector3.zero;
         ApplyGravity();
 
-        if (command != null)
+        if (Command != null)
         {
-            dir.x = command.DirX;
-            dir.z = command.DirZ;
+            dir.x = Command.DirX;
+            dir.z = Command.DirZ;
 
-            if (command.IsJump && characterController.isGrounded)
+            if (Command.IsJump && characterController.isGrounded)
                 ApplyJump();
 
-            if (command.IsAttack && !isAttacking)
+            if (Command.IsAttack && !isAttacking)
                 ApplyAttack(dir);
 
-            command = null;
+            Command = null;
         }
 
         ApplyRotation(dir);
         ApplyMovement(dir);
         Rotate();
-        Move();
+        if (!isAttacking)
+            Move();
     }
 
     private void ApplyGravity()

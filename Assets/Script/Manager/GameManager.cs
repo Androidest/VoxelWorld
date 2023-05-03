@@ -12,6 +12,7 @@ namespace Assets.Script.Manager
         {
             CameraController.SetTarget(CurPlayerController.gameObject.transform);
             InputController.TargetPlayer = CurPlayerController;
+            InputController.TargetCamera = CameraController;
         }
     }
 }

@@ -6,15 +6,18 @@ public class InputController : MonoBehaviour
 {
     private bool isDraging = false;
     public PlayerController TargetPlayer;
+    public CameraController TargetCamera;
 
-    private PlayerCommand command;
+    private PlayerCommand playerCommand;
+    private MouseCommand mouseCommand;
+
     public PlayerCommand CurCommand
     {
         get
         {
-            if (command == null)
-                command = new PlayerCommand();
-            return command;
+            if (playerCommand == null)
+                playerCommand = new PlayerCommand();
+            return playerCommand;
         }
     }
 
@@ -29,17 +32,29 @@ public class InputController : MonoBehaviour
 
     private void SendCommand()
     {
-        if (command != null)
+        if (!IsMouseOverUI && !isDraging)
         {
-            TargetPlayer.Command = command;
-            command = null;
+            TargetCamera.Command = mouseCommand;
+        }
+        if (playerCommand != null)
+        {
+            TargetPlayer.Command = playerCommand;
+            playerCommand = null;
         }
     }
+
+    public bool IsMouseOverUI => EventSystem.current.IsPointerOverGameObject();
 
     void Update()
     {
         if (TargetPlayer == null)
             return;
+
+        mouseCommand = new MouseCommand
+        {
+            deltaX = Input.GetAxis("Mouse X"),
+            deltaY = Input.GetAxis("Mouse Y"),
+        };
 
         var h = Input.GetAxisRaw("Horizontal");
         if (h != 0)
@@ -53,7 +68,7 @@ public class InputController : MonoBehaviour
             CurCommand.DirZ = v;
         }
 
-        if (Input.GetMouseButton(0) && !EventSystem.current.IsPointerOverGameObject() && !isDraging)
+        if (Input.GetMouseButton(0) && !IsMouseOverUI && !isDraging)
         {
             CurCommand.IsAttack = true;
         }
