@@ -5,7 +5,7 @@ namespace Assets.Script.Models
 {
     public class VoxelConfig
     {
-        private Dictionary<EBlockType, MeshData[]> MeshTypeMap;
+        private Dictionary<EBlockType, MeshData[]> meshTypeMap;
         public const int MAX_FACE_COUNT = 6;
         public static readonly int TYPE_COUNT = (int)Mathf.Pow(2, MAX_FACE_COUNT);
         public static readonly int EMPTY_MESH_TYPE = TYPE_COUNT - 1;
@@ -16,10 +16,10 @@ namespace Assets.Script.Models
             var tileSize = new Vector2(config.TileSizeX, config.TileSizeY);
             var faceConfig = new VoxelFaceConfig();
             int typeCount = TYPE_COUNT;
-            MeshTypeMap = new Dictionary<EBlockType, MeshData[]>();
+            meshTypeMap = new Dictionary<EBlockType, MeshData[]>();
 
             foreach (var block in config.Blocks)
-                MeshTypeMap.Add(block.Type, new MeshData[typeCount]);
+                meshTypeMap.Add(block.Type, new MeshData[typeCount]);
 
             // meshType is a bit mask, uses the first 6 bits to represent the 6 faces of a voxel
             // if a bit is set, it means this face is hidden
@@ -37,17 +37,17 @@ namespace Assets.Script.Models
                     var faceMesh = faceConfig.GetFaceMeshData(faceType);
 
                     // compute vertices
-                    foreach (var vert in faceMesh.vertices)
+                    foreach (var vert in faceMesh.Vertices)
                         vertexList.Add(vert);
 
                     // compute triangles
-                    foreach (var vIndex in faceMesh.triangles)
+                    foreach (var vIndex in faceMesh.Triangles)
                         triangleList.Add(vIndex + indexOffset);
 
-                    indexOffset += faceMesh.vertices.Length;
+                    indexOffset += faceMesh.Vertices.Length;
 
                     // compute uvs for different blockType and faces
-                    foreach (var uv in faceMesh.uv)
+                    foreach (var uv in faceMesh.UV)
                     {
                         foreach (var block in config.Blocks)
                         {
@@ -74,11 +74,11 @@ namespace Assets.Script.Models
                 {
                     // generate mesh data for every type of voxel mesh
                     // meshType equals 0 means this type of voxel mesh has no hidden faces (has complete 6 faces) 
-                    MeshTypeMap[block.Type][meshType] = new MeshData
+                    meshTypeMap[block.Type][meshType] = new MeshData
                     {
-                        vertices = vertices,
-                        triangles = triangles,
-                        uv = uvDictList[block.Type].ToArray(),
+                        Vertices = vertices,
+                        Triangles = triangles,
+                        UV = uvDictList[block.Type].ToArray(),
                     };
                 }
             }
@@ -91,7 +91,7 @@ namespace Assets.Script.Models
 
         public MeshData GetMeshData(EBlockType blockType, int meshType)
         {
-            return MeshTypeMap[blockType][meshType];
+            return meshTypeMap[blockType][meshType];
         }
     }
 }

@@ -7,23 +7,23 @@ using UnityEngine;
 [RequireComponent(typeof(MeshCollider))]
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
-public class VoxelGenerator : MonoBehaviour
+public class ChunkController : MonoBehaviour
 {
-    private FastNoiseLite Noise = new FastNoiseLite();
-    const int ChunkSize = 32;
-    const int ChunkHeight = 24;
-    const int FrameRate = 30;
-    const float LazyLoadingPercentPerFrame = 0.2f;
-    const float LazyLoadingTimePerFrame = 1f / FrameRate * LazyLoadingPercentPerFrame;
-    private int[,] HeightMap;
-    private int StartX;
-    private int StartZ;
+    private FastNoiseLite noise = new FastNoiseLite();
+    private const int chunkSize = 32;
+    private const int chunkHeight = 24;
+    private const int frameRate = 30;
+    private const float lazyLoadingPercentPerFrame = 0.2f;
+    private const float lazyLoadingTimePerFrame = 1f / frameRate * lazyLoadingPercentPerFrame;
+    private int[,] heightMap;
+    private int startX;
+    private int startZ;
 
     void Start()
     {
-        Noise.SetSeed(ConfigManager.Instance.Seed);
-        StartX = (int)transform.position.x;
-        StartZ = (int)transform.position.z;
+        noise.SetSeed(ConfigManager.Instance.Seed);
+        startX = (int)transform.position.x;
+        startZ = (int)transform.position.z;
 
         GenerateHeightMap();
         StartCoroutine(LazyGenerateChunk());
@@ -31,21 +31,21 @@ public class VoxelGenerator : MonoBehaviour
 
     void GenerateHeightMap()
     {
-        int size = ChunkSize + 2;
-        HeightMap = new int[size, size];
+        int size = chunkSize + 2;
+        heightMap = new int[size, size];
         
         for (int x = 0; x < size; ++x)
         {
             for (int z = 0; z < size; ++z)
             {
-                HeightMap[x, z] = Mathf.FloorToInt((Noise.GetNoise(x + StartX, z + StartZ) + 1f) * 0.5f * ChunkHeight);
+                heightMap[x, z] = Mathf.FloorToInt((noise.GetNoise(x + startX, z + startZ) + 1f) * 0.5f * chunkHeight);
             }
         }
     }
 
     bool IsSolid(int x, int y, int z)
     {
-        return HeightMap[x + 1, z + 1] >= y;
+        return heightMap[x + 1, z + 1] >= y;
     }
 
     EBlockType GetBlockType(int x, int y, int z)
@@ -63,17 +63,17 @@ public class VoxelGenerator : MonoBehaviour
 
     IEnumerator LazyGenerateChunk()
     {
-        float nextInterruptTime = Time.realtimeSinceStartup + LazyLoadingTimePerFrame;
+        float nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
         int vertexCount = 0;
         int triangleCount = 0;
         var meshDataList = new List<(Vector3, MeshData)>();
         var voxelConfig = ConfigManager.Instance.VoxelConfig;
 
-        for (int x = 0; x < ChunkSize; ++x)
+        for (int x = 0; x < chunkSize; ++x)
         {
-            for (int z = 0; z < ChunkSize; ++z)
+            for (int z = 0; z < chunkSize; ++z)
             {
-                for (int y = 0; y < ChunkHeight; ++y)
+                for (int y = 0; y < chunkHeight; ++y)
                 {
                     var blockType = GetBlockType(x, y, z);
                     if (blockType == EBlockType.None)
@@ -92,12 +92,12 @@ public class VoxelGenerator : MonoBehaviour
 
                     var meshData = voxelConfig.GetMeshData(blockType, meshType);
                     meshDataList.Add((new Vector3(x, y, z), meshData));
-                    vertexCount += meshData.vertices.Length;
-                    triangleCount += meshData.triangles.Length;
+                    vertexCount += meshData.Vertices.Length;
+                    triangleCount += meshData.Triangles.Length;
 
                     if (Time.realtimeSinceStartup > nextInterruptTime)
                     {
-                        nextInterruptTime = Time.realtimeSinceStartup + LazyLoadingTimePerFrame;
+                        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
                         yield return null;
                     }
                 }
@@ -112,9 +112,9 @@ public class VoxelGenerator : MonoBehaviour
         int tOffset = 0;
         foreach (var (pos, meshData) in meshDataList)
         {
-            var mVertices = meshData.vertices;
-            var mTriangles = meshData.triangles;
-            var muv = meshData.uv;
+            var mVertices = meshData.Vertices;
+            var mTriangles = meshData.Triangles;
+            var muv = meshData.UV;
 
             for (int i = 0; i < mVertices.Length; ++i)
             {
@@ -133,7 +133,7 @@ public class VoxelGenerator : MonoBehaviour
 
             if (Time.realtimeSinceStartup > nextInterruptTime)
             {
-                nextInterruptTime = Time.realtimeSinceStartup + LazyLoadingTimePerFrame;
+                nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
                 yield return null;
             }
         }

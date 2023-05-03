@@ -6,7 +6,7 @@ namespace Assets.Script.Models
     {
         private readonly int[] triangles = new int[] { 0, 1, 2, 2, 3, 0 };
         private readonly Vector2[] uv = new Vector2[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
-        private Vector3[][] FaceVerticesMap;
+        private Vector3[][] faceVerticesMap;
 
         public VoxelFaceConfig()
         {
@@ -38,21 +38,21 @@ namespace Assets.Script.Models
             faceVerticesIndex[FaceType.Top] = new int[] { 1, 0, 4, 5 }; // top
             faceVerticesIndex[FaceType.Bottom] = new int[] { 7, 6, 2, 3 }; // bottom
 
-            FaceVerticesMap = new Vector3[6][];
+            faceVerticesMap = new Vector3[6][];
             for (int i = 0; i < 6; ++i)
             {
-                FaceVerticesMap[i] = new Vector3[4];
+                faceVerticesMap[i] = new Vector3[4];
                 for (int j = 0; j < 4; ++j)
                 {
                     var index = faceVerticesIndex[i][j];
-                    FaceVerticesMap[i][j] = cubeVertices[index];
+                    faceVerticesMap[i][j] = cubeVertices[index];
                 }
             }
         }
 
         public MeshData GetFaceMeshData(int faceType)
         {
-            if (FaceVerticesMap == null)
+            if (faceVerticesMap == null)
             {
                 Debug.LogError($"VoxelFaceHelper not initialized");
                 return null;
@@ -60,9 +60,9 @@ namespace Assets.Script.Models
 
             return new MeshData
             {
-                vertices = FaceVerticesMap[faceType],
-                triangles = triangles,
-                uv = uv
+                Vertices = faceVerticesMap[faceType],
+                Triangles = triangles,
+                UV = uv
             };
         }   
 
