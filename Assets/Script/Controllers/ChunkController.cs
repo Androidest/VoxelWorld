@@ -21,6 +21,9 @@ public class ChunkController : MonoBehaviour
     void Awake()
     {
         noise.SetSeed(ConfigManager.Instance.Seed);
+        noise.SetFractalOctaves(5);
+        noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
+        noise.SetFrequency(0.02f);
         //StartCoroutine(LazyGenerateChunk());
     }
 
@@ -99,11 +102,11 @@ public class ChunkController : MonoBehaviour
                     vertexCount += meshData.Vertices.Length;
                     triangleCount += meshData.Triangles.Length;
 
-                    //if (Time.realtimeSinceStartup > nextInterruptTime)
-                    //{
-                    //    nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-                    //    yield return null;
-                    //}
+                    if (Time.realtimeSinceStartup > nextInterruptTime)
+                    {
+                        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
+                        yield return null;
+                    }
                 }
             }
         }
@@ -137,11 +140,11 @@ public class ChunkController : MonoBehaviour
             vOffset += mVertices.Length;
             tOffset += mTriangles.Length;
 
-            //if (Time.realtimeSinceStartup > nextInterruptTime)
-            //{
-            //    nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-            //    yield return null;
-            //}
+            if (Time.realtimeSinceStartup > nextInterruptTime)
+            {
+                nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
+                yield return null;
+            }
         }
 
         // mesh

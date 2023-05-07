@@ -18,8 +18,9 @@ namespace Assets.Script.Manager
         private Dictionary<Vector3Int, ChunkController> activeChunks;
         private Transform world;
         private Vector3Int lastStayChunkPos;
-        private Coroutine UpdateTerrainCoroutine;
         private bool IsInit;
+        private bool IsChunksLoading;
+        private bool NeedInterruptAndRegenerate;
 
         protected override void OnAwake()
         {
@@ -33,7 +34,7 @@ namespace Assets.Script.Manager
             activeChunks = new Dictionary<Vector3Int, ChunkController>();
             IsInit = false;
 
-            pool = new StackPool<ChunkController>(20,
+            pool = new StackPool<ChunkController>(70,
                 OnCreateChunk,
                 OnGetChunkFromPool,
                 OnReleaseChunkToPool,
@@ -70,14 +71,15 @@ namespace Assets.Script.Manager
 
         #endregion
 
-        IEnumerator UpdateTerrain(Vector3Int newCenterChunkPos)
+        IEnumerator LazyUpdateChunks()
         {
             const int radius = Consts.ViewDistanceInChunks * Consts.ChunkSize;
             // calculate visible inner rect 
-            int startX = newCenterChunkPos.x - radius;
-            int startZ = newCenterChunkPos.z - radius;
-            int endX = newCenterChunkPos.x + radius + 1;
-            int endZ = newCenterChunkPos.z + radius + 1;
+            var centerChunkPos = lastStayChunkPos;
+            int startX = centerChunkPos.x - radius;
+            int startZ = centerChunkPos.z - radius;
+            int endX = centerChunkPos.x + radius + 1;
+            int endZ = centerChunkPos.z + radius + 1;
 
             // calculate outer rect for chunks removal
             const int extraSize = Consts.ChunkSize;
@@ -108,9 +110,12 @@ namespace Assets.Script.Manager
                 }
             }
 
-            var center = newCenterChunkPos;
+            var center = centerChunkPos;
             chunksToCreate.Sort((a, b) => (Mathf.Abs(a.x - center.x) + Mathf.Abs(a.z - center.x)) 
                                          - (Mathf.Abs(b.x - center.x) + Mathf.Abs(b.z - center.x)));
+
+            yield return null;
+
             foreach (var pos in chunksToCreate)
             {
                 var chunkController = pool.Get();
@@ -119,7 +124,24 @@ namespace Assets.Script.Manager
                 chunkController.gameObject.name = $"{pos}";
                 chunkController.transform.position = pos;
                 yield return chunkController.LazyGenerateChunk();
+
+                // check if need interruption and regenerate
+                if (NeedInterruptAndRegenerate)
+                    yield break;
             }
+        }
+
+        IEnumerator StartUpdateChunks()
+        {
+            do
+            {
+                IsChunksLoading = true;
+                NeedInterruptAndRegenerate = false;
+                yield return LazyUpdateChunks();
+
+            } while (NeedInterruptAndRegenerate);
+
+            IsChunksLoading = false;
         }
 
         public void Update()
@@ -132,10 +154,10 @@ namespace Assets.Script.Manager
                 IsInit = true;
                 lastStayChunkPos = newStayChunkPos;
 
-                if (UpdateTerrainCoroutine != null)
-                    StopCoroutine(UpdateTerrainCoroutine);
-
-                UpdateTerrainCoroutine = StartCoroutine(UpdateTerrain(newStayChunkPos));
+                if (IsChunksLoading)
+                    NeedInterruptAndRegenerate = true;
+                else
+                    StartCoroutine(StartUpdateChunks());
             }
         }
     }

@@ -9,7 +9,7 @@ namespace Assets.Script.Manager
     {
         [SerializeField] BlockConfig BlockConfig;
         public VoxelConfig VoxelConfig;
-        public int Seed = 1336;
+        public int Seed = 1334;
         public float VertCamSpeed = 5f;
         public float HorzCamSpeed = 5f;
 
