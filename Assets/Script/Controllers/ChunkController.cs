@@ -10,7 +10,7 @@ using UnityEngine;
 public class ChunkController : MonoBehaviour
 {
     private const int frameRate = 30;
-    private const float lazyLoadingPercentPerFrame = 0.2f;
+    private const float lazyLoadingPercentPerFrame = 0.5f;
     private const float lazyLoadingTimePerFrame = 1f / frameRate * lazyLoadingPercentPerFrame;
 
     private FastNoiseLite noise = new FastNoiseLite();
@@ -18,18 +18,17 @@ public class ChunkController : MonoBehaviour
     private int startX;
     private int startZ;
 
-    void Start()
+    void Awake()
     {
         noise.SetSeed(ConfigManager.Instance.Seed);
+        //StartCoroutine(LazyGenerateChunk());
+    }
+
+    void InitHeightMap()
+    {
         startX = (int)transform.position.x;
         startZ = (int)transform.position.z;
 
-        GenerateHeightMap();
-        StartCoroutine(LazyGenerateChunk());
-    }
-
-    void GenerateHeightMap()
-    {
         int size = Consts.ChunkSize + 2;
         heightMap = new int[size, size];
         
@@ -60,7 +59,13 @@ public class ChunkController : MonoBehaviour
             return EBlockType.Sand;
     }
 
-    IEnumerator LazyGenerateChunk()
+    public IEnumerator LazyGenerateChunk()
+    {
+        InitHeightMap();
+        yield return LazyUpdateChunk();
+    }
+
+    public IEnumerator LazyUpdateChunk()
     {
         float nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
         int vertexCount = 0;
@@ -94,14 +99,16 @@ public class ChunkController : MonoBehaviour
                     vertexCount += meshData.Vertices.Length;
                     triangleCount += meshData.Triangles.Length;
 
-                    if (Time.realtimeSinceStartup > nextInterruptTime)
-                    {
-                        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-                        yield return null;
-                    }
+                    //if (Time.realtimeSinceStartup > nextInterruptTime)
+                    //{
+                    //    nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
+                    //    yield return null;
+                    //}
                 }
             }
         }
+
+        yield return null;
 
         Vector3[] vertices = new Vector3[vertexCount];
         int[] triangles = new int[triangleCount];
@@ -130,11 +137,11 @@ public class ChunkController : MonoBehaviour
             vOffset += mVertices.Length;
             tOffset += mTriangles.Length;
 
-            if (Time.realtimeSinceStartup > nextInterruptTime)
-            {
-                nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-                yield return null;
-            }
+            //if (Time.realtimeSinceStartup > nextInterruptTime)
+            //{
+            //    nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
+            //    yield return null;
+            //}
         }
 
         // mesh
