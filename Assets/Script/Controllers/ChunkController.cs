@@ -1,12 +1,11 @@
 using Assets.Script.Manager;
 using Assets.Script.Models;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshCollider))]
-[RequireComponent(typeof(MeshFilter))]
-[RequireComponent(typeof(MeshRenderer))]
 public class ChunkController : MonoBehaviour
 {
     private const int frameRate = 30;
@@ -17,14 +16,30 @@ public class ChunkController : MonoBehaviour
     private int[,] heightMap;
     private int startX;
     private int startZ;
+    private float nextInterruptTime;
+    private MeshFilter normalMeshFilter;
+    private MeshFilter transparentMeshFilter;
+    private MeshCollider meshCollider;
+    private VoxelConfig voxelConfig;
 
     void Awake()
     {
+        normalMeshFilter = transform.Find("NormalMesh").GetComponent<MeshFilter>();
+        transparentMeshFilter = transform.Find("TransparentMesh").GetComponent<MeshFilter>();
+        meshCollider = GetComponent<MeshCollider>();
+        voxelConfig = ConfigManager.Instance.VoxelConfig;
+
         noise.SetSeed(ConfigManager.Instance.Seed);
         noise.SetFractalOctaves(5);
         noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
         noise.SetFrequency(0.02f);
-        //StartCoroutine(LazyGenerateChunk());
+    }
+
+    public void Disable()
+    {
+        normalMeshFilter.gameObject.SetActive(false);
+        transparentMeshFilter.gameObject.SetActive(false);
+        meshCollider.gameObject.SetActive(false);
     }
 
     void InitHeightMap()
@@ -44,37 +59,45 @@ public class ChunkController : MonoBehaviour
         }
     }
 
-    bool IsSolid(int x, int y, int z)
+    BlockTypeConfig GetBlockData(int x, int y, int z)
     {
-        return heightMap[x + 1, z + 1] >= y;
+        var blockType = GetBlockType(x, y, z);
+        return voxelConfig.GetBlockTypeConfig(blockType);
     }
 
     EBlockType GetBlockType(int x, int y, int z)
     {
-        if (!IsSolid(x, y, z))
+        if (heightMap[x + 1, z + 1] < y)
+        {
+            if (y < 10)
+                return EBlockType.Water;
             return EBlockType.None;
+        }
 
-        if (y > 20)
+        if (y > 30)
             return EBlockType.Snow;
-        else if (y > 8)
+        else if (y > 15)
             return EBlockType.Grass;
         else
+        {
             return EBlockType.Sand;
+        }
+            
     }
 
     public IEnumerator LazyGenerateChunk()
     {
+        Disable();
         InitHeightMap();
         yield return LazyUpdateChunk();
     }
 
     public IEnumerator LazyUpdateChunk()
     {
-        float nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-        int vertexCount = 0;
-        int triangleCount = 0;
+        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
         var meshDataList = new List<(Vector3, MeshData)>();
-        var voxelConfig = ConfigManager.Instance.VoxelConfig;
+        var meshDataList_trans = new List<(Vector3, MeshData)>();
+        var meshDataList_col = new List<(Vector3, MeshData)>();
 
         for (int x = 0; x < Consts.ChunkSize; ++x)
         {
@@ -82,92 +105,112 @@ public class ChunkController : MonoBehaviour
             {
                 for (int y = 0; y < Consts.ChunkHeight; ++y)
                 {
-                    var blockType = GetBlockType(x, y, z);
-                    if (blockType == EBlockType.None)
+                    BlockTypeConfig blockData = GetBlockData(x, y, z);
+                    if (blockData.Type == EBlockType.None)
                         continue;
 
-                    int meshType = 0;
-                    if (IsSolid(x, y, z + 1)) meshType |= FaceBitMask.Front;
-                    if (IsSolid(x, y, z - 1)) meshType |= FaceBitMask.Back;
-                    if (IsSolid(x - 1, y, z)) meshType |= FaceBitMask.Left;
-                    if (IsSolid(x + 1, y, z)) meshType |= FaceBitMask.Right;
-                    if (IsSolid(x, y + 1, z)) meshType |= FaceBitMask.Top;
-                    if (IsSolid(x, y - 1, z)) meshType |= FaceBitMask.Bottom;
+                    var layer = blockData.Layer;
 
+                    int meshType = 0;
+                    if (GetBlockData(x, y, z + 1).Layer == layer) meshType |= FaceBitMask.Front;
+                    if (GetBlockData(x, y, z - 1).Layer == layer) meshType |= FaceBitMask.Back;
+                    if (GetBlockData(x - 1, y, z).Layer == layer) meshType |= FaceBitMask.Left;
+                    if (GetBlockData(x + 1, y, z).Layer == layer) meshType |= FaceBitMask.Right;
+                    if (GetBlockData(x, y + 1, z).Layer == layer) meshType |= FaceBitMask.Top;
+                    if (GetBlockData(x, y - 1, z).Layer == layer) meshType |= FaceBitMask.Bottom;
                     if (meshType == VoxelConfig.EMPTY_MESH_TYPE)
                         continue;
 
-                    var meshData = voxelConfig.GetMeshData(blockType, meshType);
-                    meshDataList.Add((new Vector3(x, y, z), meshData));
-                    vertexCount += meshData.Vertices.Length;
-                    triangleCount += meshData.Triangles.Length;
+                    var meshData = voxelConfig.GetMeshData(blockData.Type, meshType);
 
-                    if (Time.realtimeSinceStartup > nextInterruptTime)
-                    {
-                        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-                        yield return null;
-                    }
+                    var pos = new Vector3(x, y, z);
+                    if (blockData.IsTransparent)
+                        meshDataList_trans.Add((pos, meshData));
+                    else
+                        meshDataList.Add((pos, meshData));
+
+                    if(blockData.IsSolid)
+                        meshDataList_col.Add((pos, meshData));
+
+                    //yield return S();
                 }
             }
         }
 
-        yield return null;
-
-        Vector3[] vertices = new Vector3[vertexCount];
-        int[] triangles = new int[triangleCount];
-        Vector2[] uv = new Vector2[vertexCount];
-
-        int vOffset = 0;
-        int tOffset = 0;
-        foreach (var (pos, meshData) in meshDataList)
+        // mesh
+        if (meshDataList.Count > 0)
         {
-            var mVertices = meshData.Vertices;
-            var mTriangles = meshData.Triangles;
-            var muv = meshData.UV;
-
-            for (int i = 0; i < mVertices.Length; ++i)
-            {
-                int index = i + vOffset;
-                vertices[index] = mVertices[i] + pos;
-                uv[index] = muv[i];
-            }
-
-            for (int i = 0; i < mTriangles.Length; ++i)
-            {
-                triangles[i + tOffset] = mTriangles[i] + vOffset;
-            }
-
-            vOffset += mVertices.Length;
-            tOffset += mTriangles.Length;
-
-            if (Time.realtimeSinceStartup > nextInterruptTime)
-            {
-                nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-                yield return null;
-            }
+            Mesh mesh = new Mesh();
+            yield return MergeMeshData(meshDataList, mesh);
+            normalMeshFilter.mesh = mesh;
+            normalMeshFilter.gameObject.SetActive(true);
         }
 
-        // mesh
-        var mf = GetComponent<MeshFilter>();
-        Mesh mesh = new Mesh
+        // transparent mesh
+        if (meshDataList_trans.Count > 0)
         {
-            vertices = vertices,
-            triangles = triangles,
-            uv = uv
-        };
-        mesh.RecalculateNormals();
-        mf.mesh = mesh;
+            Mesh mesh = new Mesh();
+            yield return MergeMeshData(meshDataList_trans, mesh);
+            transparentMeshFilter.mesh = mesh;
+            transparentMeshFilter.gameObject.SetActive(true);
+        }
 
-        // collier mesh
-        var collider = GetComponent<MeshCollider>();
-        Mesh colliderMesh = new Mesh
+        // collider mesh
+        if (meshDataList_col.Count > 0)
         {
-            vertices = vertices,
-            triangles = triangles,
-            uv = uv
-        };
-        colliderMesh.RecalculateNormals();
-        collider.sharedMesh = colliderMesh;
+            Mesh mesh = new Mesh();
+            yield return MergeMeshData(meshDataList_col, mesh, false);
+            meshCollider.sharedMesh = mesh;
+            meshCollider.gameObject.SetActive(true);
+        }
+    }
+
+    IEnumerator MergeMeshData(List<(Vector3, MeshData)> meshDataList, Mesh mesh, bool hasUV = true)
+    {
+        int vertexCount = meshDataList.Sum(m => m.Item2.Vertices.Length);
+        var vertices = new Vector3[vertexCount];
+        var triangles = new int[vertexCount / Consts.VoxelFaceVertexCount * Consts.VoxelFaceTriangleCount];
+        var uv = new Vector2[vertexCount];
+
+        int vIndex = 0;
+        int tIndex = 0;
+
+        foreach (var (pos, meshData) in meshDataList)
+        {
+            var lastVoxelVertexIndex = vIndex;
+
+            for (int i = 0; i < meshData.Vertices.Length; ++i)
+            {
+                vertices[vIndex] = meshData.Vertices[i] + pos;
+                ++vIndex;
+            }
+
+            if (hasUV)
+                Array.Copy(meshData.UV, 0, uv, lastVoxelVertexIndex, meshData.UV.Length);
+
+            for (int i = 0; i < meshData.Triangles.Length; ++i)
+            {
+                triangles[tIndex] = meshData.Triangles[i] + lastVoxelVertexIndex;
+                ++tIndex;
+            }
+
+        }
+        yield return null;
+
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        if (hasUV)
+            mesh.uv = uv;
+        mesh.RecalculateNormals();
+    }
+
+    IEnumerator S()
+    {
+        if (Time.realtimeSinceStartup > nextInterruptTime)
+        {
+            nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
+            yield return null;
+        }
     }
 
     void Update()

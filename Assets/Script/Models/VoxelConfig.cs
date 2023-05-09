@@ -6,12 +6,13 @@ namespace Assets.Script.Models
     public class VoxelConfig
     {
         private Dictionary<EBlockType, MeshData[]> meshTypeMap;
-        public const int MAX_FACE_COUNT = 6;
-        public static readonly int TYPE_COUNT = (int)Mathf.Pow(2, MAX_FACE_COUNT);
+        private BlockConfig blockConfig;
+        public static readonly int TYPE_COUNT = (int)Mathf.Pow(2, Consts.VoxelFaceCount);
         public static readonly int EMPTY_MESH_TYPE = TYPE_COUNT - 1;
 
         public VoxelConfig(BlockConfig config)
         {
+            blockConfig = config;
             int faceCount = 6;
             var tileSize = new Vector2(config.TileSizeX, config.TileSizeY);
             var faceConfig = new VoxelFaceConfig();
@@ -70,15 +71,15 @@ namespace Assets.Script.Models
                 var vertices = vertexList.ToArray();
                 var triangles = triangleList.ToArray();
 
-                foreach (var block in config.Blocks)
+                foreach (var blockTypeConfig in config.Blocks)
                 {
                     // generate mesh data for every type of voxel mesh
                     // meshType equals 0 means this type of voxel mesh has no hidden faces (has complete 6 faces) 
-                    meshTypeMap[block.Type][meshType] = new MeshData
+                    meshTypeMap[blockTypeConfig.Type][meshType] = new MeshData
                     {
                         Vertices = vertices,
                         Triangles = triangles,
-                        UV = uvDictList[block.Type].ToArray(),
+                        UV = uvDictList[blockTypeConfig.Type].ToArray()
                     };
                 }
             }
@@ -92,6 +93,11 @@ namespace Assets.Script.Models
         public MeshData GetMeshData(EBlockType blockType, int meshType)
         {
             return meshTypeMap[blockType][meshType];
+        }
+
+        public BlockTypeConfig GetBlockTypeConfig(EBlockType blockType)
+        {
+            return blockConfig.Blocks_Dict[blockType];
         }
     }
 }

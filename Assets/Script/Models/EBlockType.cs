@@ -7,5 +7,6 @@ namespace Assets.Script.Models
         Grass = 2,
         Snow = 3,
         Sand = 4,
+        Water = 5,
     }
 }

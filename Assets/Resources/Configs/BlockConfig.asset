@@ -19,19 +19,41 @@ MonoBehaviour:
     TileTop: {x: 0, y: 0}
     TileSides: {x: 0, y: 0}
     TileBottom: {x: 0, y: 0}
+    IsSolid: 0
+    IsTransparent: 1
+    Layer: -1
   - Type: 1
     TileTop: {x: 7, y: 4}
     TileSides: {x: 7, y: 4}
     TileBottom: {x: 7, y: 4}
+    IsSolid: 1
+    IsTransparent: 0
+    Layer: 0
   - Type: 2
     TileTop: {x: 8, y: 9}
     TileSides: {x: 7, y: 5}
     TileBottom: {x: 7, y: 4}
+    IsSolid: 1
+    IsTransparent: 0
+    Layer: 0
   - Type: 4
     TileTop: {x: 3, y: 3}
     TileSides: {x: 7, y: 3}
     TileBottom: {x: 7, y: 3}
+    IsSolid: 1
+    IsTransparent: 0
+    Layer: 0
   - Type: 3
     TileTop: {x: 3, y: 4}
     TileSides: {x: 7, y: 7}
     TileBottom: {x: 7, y: 7}
+    IsSolid: 1
+    IsTransparent: 0
+    Layer: 0
+  - Type: 5
+    TileTop: {x: 7, y: 0}
+    TileSides: {x: 7, y: 0}
+    TileBottom: {x: 7, y: 0}
+    IsSolid: 0
+    IsTransparent: 1
+    Layer: 1

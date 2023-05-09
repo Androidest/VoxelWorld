@@ -4,7 +4,7 @@ namespace Assets.Script.Models
 {
     public class VoxelFaceConfig
     {
-        private readonly int[] triangles = new int[] { 0, 1, 2, 2, 3, 0 };
+        private readonly int[] triangles = new int[Consts.VoxelFaceTriangleCount] { 0, 1, 2, 2, 3, 0 };
         private readonly Vector2[] uv = new Vector2[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
         private Vector3[][] faceVerticesMap;
 
@@ -30,7 +30,7 @@ namespace Assets.Script.Models
             };
 
             // 6 face, 4 vertices each
-            var faceVerticesIndex = new int[6][];
+            var faceVerticesIndex = new int[Consts.VoxelFaceCount][];
             faceVerticesIndex[FaceType.Front] = new int[] { 0, 1, 3, 2 }; // front
             faceVerticesIndex[FaceType.Back] = new int[] { 5, 4, 6, 7 }; // back
             faceVerticesIndex[FaceType.Left] = new int[] { 1, 5, 7, 3 }; // left
@@ -38,11 +38,11 @@ namespace Assets.Script.Models
             faceVerticesIndex[FaceType.Top] = new int[] { 1, 0, 4, 5 }; // top
             faceVerticesIndex[FaceType.Bottom] = new int[] { 7, 6, 2, 3 }; // bottom
 
-            faceVerticesMap = new Vector3[6][];
+            faceVerticesMap = new Vector3[Consts.VoxelFaceCount][];
             for (int i = 0; i < 6; ++i)
             {
-                faceVerticesMap[i] = new Vector3[4];
-                for (int j = 0; j < 4; ++j)
+                faceVerticesMap[i] = new Vector3[Consts.VoxelFaceVertexCount];
+                for (int j = 0; j < Consts.VoxelFaceVertexCount; ++j)
                 {
                     var index = faceVerticesIndex[i][j];
                     faceVerticesMap[i][j] = cubeVertices[index];
@@ -61,7 +61,7 @@ namespace Assets.Script.Models
             return new MeshData
             {
                 Vertices = faceVerticesMap[faceType],
-                Triangles = triangles,
+                Triangles = triangles ,
                 UV = uv
             };
         }   

@@ -60,7 +60,7 @@ namespace Assets.Script.Common
             T obj = default(T);
             try
             {
-                obj = CreateIntance(); Debug.Log("TryCreate");
+                obj = CreateIntance();
             }
             catch (Exception e)
             {
@@ -79,7 +79,7 @@ namespace Assets.Script.Common
         {
             try
             {
-                DestroyInstance(obj); Debug.Log("TryDestroy");
+                DestroyInstance(obj);
             }
             catch (Exception e)
             {

@@ -134,7 +134,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 403605355}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 62736661}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bba2bad1eae225a45aee61b38a52414e, type: 3}
   m_Name: 
@@ -165,6 +165,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 512824623}
     m_Modifications:
+    - target: {fileID: 62736665, guid: 03fa9d9f2e08dec40b774122b8dffe32, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1795033595616022, guid: 03fa9d9f2e08dec40b774122b8dffe32, type: 3}
       propertyPath: m_Name
       value: Player
@@ -191,11 +195,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4902997933040912, guid: 03fa9d9f2e08dec40b774122b8dffe32, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 35.81
+      value: 21.1
       objectReference: {fileID: 0}
     - target: {fileID: 4902997933040912, guid: 03fa9d9f2e08dec40b774122b8dffe32, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 10.56
+      value: -25
       objectReference: {fileID: 0}
     - target: {fileID: 4902997933040912, guid: 03fa9d9f2e08dec40b774122b8dffe32, type: 3}
       propertyPath: m_LocalRotation.w

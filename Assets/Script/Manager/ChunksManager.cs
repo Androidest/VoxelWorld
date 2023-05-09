@@ -1,12 +1,10 @@
 using Assets.Script.Common;
 using Assets.Script.Helpers;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Pool;
 
 namespace Assets.Script.Manager
 {
@@ -111,8 +109,8 @@ namespace Assets.Script.Manager
             }
 
             var center = centerChunkPos;
-            chunksToCreate.Sort((a, b) => (Mathf.Abs(a.x - center.x) + Mathf.Abs(a.z - center.x)) 
-                                         - (Mathf.Abs(b.x - center.x) + Mathf.Abs(b.z - center.x)));
+            chunksToCreate.Sort((a, b) => (Mathf.Abs(a.x - center.x) + Mathf.Abs(a.z - center.z)) 
+                                         - (Mathf.Abs(b.x - center.x) + Mathf.Abs(b.z - center.z)));
 
             yield return null;
 
