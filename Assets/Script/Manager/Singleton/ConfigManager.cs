@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Assets.Script.Manager
 {
-    public class ConfigManager : MonoBehaviorSingletonBase<ConfigManager>
+    public class ConfigManager : MonoBehaviourSingletonBase<ConfigManager>
     {
         [SerializeField] BlockConfig BlockConfig;
         public VoxelConfig VoxelConfig;

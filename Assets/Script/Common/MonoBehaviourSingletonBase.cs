@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 
-public class MonoBehaviorSingletonBase<T> : MonoBehaviour where T : MonoBehaviorSingletonBase<T>
+public class MonoBehaviourSingletonBase<T> : MonoBehaviour where T : MonoBehaviourSingletonBase<T>
 {
     private static T instance;
     public static T Instance

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Assets.Script.Manager
 {
-    public class GameManager : MonoBehaviorSingletonBase<GameManager>
+    public class GameManager : MonoBehaviourSingletonBase<GameManager>
     {
         [SerializeField] public CameraController CameraController;
         [SerializeField] public PlayerController CurPlayerController;

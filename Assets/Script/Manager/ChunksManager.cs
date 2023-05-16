@@ -8,15 +8,16 @@ using UnityEngine.AddressableAssets;
 
 namespace Assets.Script.Manager
 {
-    public class ChunksManager : MonoBehaviorSingletonBase<ChunksManager>
+    public class ChunksManager : MonoBehaviour
     {
-        private Transform activeChunksTrans;
         private PlayerController targetPlayer;
+        private Transform worldTrans;
+        private Transform poolTrans;
+        private Transform activeChunksTrans;
         
         private StackPool<ChunkController> pool;
         private Dictionary<Vector3Int, ChunkController> activeChunks;
-        private Transform worldTrans;
-        private Transform poolTrans;
+        
         private Vector3Int lastStayChunkPos;
         private bool IsInit;
         private bool IsChunksLoading;
