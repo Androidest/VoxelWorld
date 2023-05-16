@@ -2,7 +2,7 @@ namespace Assets.Script.Models
 {
     public enum EBlockType
     {
-        None = 0,
+        Air = 0,
         Dirt = 1,
         Grass = 2,
         Snow = 3,

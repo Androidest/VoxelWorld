@@ -37,13 +37,6 @@ public class ChunkController : MonoBehaviour
         noise.SetFrequency(0.02f);
     }
 
-    public void Disable()
-    {
-        normalMeshFilter.gameObject.SetActive(false);
-        transparentMeshFilter.gameObject.SetActive(false);
-        meshCollider.enabled = false;
-    }
-
     void InitHeightMap()
     {
         startX = (int)transform.position.x;
@@ -61,19 +54,13 @@ public class ChunkController : MonoBehaviour
         }
     }
 
-    BlockTypeConfig GetBlockData(int x, int y, int z)
-    {
-        var blockType = GetBlockType(x, y, z);
-        return voxelConfig.GetBlockTypeConfig(blockType);
-    }
-
     EBlockType GetBlockType(int x, int y, int z)
     {
         if (heightMap[x + 1, z + 1] < y)
         {
             if (y < 10)
                 return EBlockType.Water;
-            return EBlockType.None;
+            return EBlockType.Air;
         }
 
         if (y > 30)
@@ -84,6 +71,14 @@ public class ChunkController : MonoBehaviour
         {
             return EBlockType.Sand;
         }
+    }
+
+    // ================= publics =============================
+    public void Disable()
+    {
+        normalMeshFilter.gameObject.SetActive(false);
+        transparentMeshFilter.gameObject.SetActive(false);
+        meshCollider.enabled = false;
     }
 
     public void GenerateChunkToPosition(Vector3 pos)
@@ -110,6 +105,13 @@ public class ChunkController : MonoBehaviour
         }
 
         StartCoroutine(GenerateChunkCoroutine());
+    }
+
+    // ================== privates ==============================
+    private BlockTypeConfig GetBlockData(int x, int y, int z)
+    {
+        var blockType = GetBlockType(x, y, z);
+        return voxelConfig.GetBlockTypeConfig(blockType);
     }
 
     private IEnumerator GenerateChunkCoroutine()
@@ -154,7 +156,7 @@ public class ChunkController : MonoBehaviour
                 for (int y = 0; y < Consts.ChunkHeight; ++y)
                 {
                     BlockTypeConfig blockData = GetBlockData(x, y, z);
-                    if (blockData.Type == EBlockType.None)
+                    if (blockData.Type == EBlockType.Air)
                         continue;
 
                     var layer = blockData.Layer;
