@@ -23,12 +23,12 @@ namespace Assets.Script.Manager
         private bool IsChunksLoading;
         private bool NeedInterruptAndRegenerate;
 
-        protected override void OnAwake()
+        private void Awake()
         {
 
         }
 
-        public void Start()
+        private void Start()
         {
             worldTrans = transform.parent;
 
