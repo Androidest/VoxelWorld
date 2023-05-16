@@ -1,26 +1,28 @@
+using Assets.Script.Helpers;
 using Assets.Script.Manager;
 using Assets.Script.Models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class ChunkController : MonoBehaviour
 {
-    private const int frameRate = 30;
-    private const float lazyLoadingPercentPerFrame = 0.5f;
-    private const float lazyLoadingTimePerFrame = 1f / frameRate * lazyLoadingPercentPerFrame;
-
     private FastNoiseLite noise = new FastNoiseLite();
     private int[,] heightMap;
     private int startX;
     private int startZ;
-    private float nextInterruptTime;
     private MeshFilter normalMeshFilter;
     private MeshFilter transparentMeshFilter;
     private MeshCollider meshCollider;
     private VoxelConfig voxelConfig;
+    public bool IsLoading;
+
+    private MeshData normalMesh;
+    private MeshData transparentMesh;
+    private MeshData colliderMesh;
 
     void Awake()
     {
@@ -39,7 +41,7 @@ public class ChunkController : MonoBehaviour
     {
         normalMeshFilter.gameObject.SetActive(false);
         transparentMeshFilter.gameObject.SetActive(false);
-        meshCollider.gameObject.SetActive(false);
+        meshCollider.enabled = false;
     }
 
     void InitHeightMap()
@@ -82,22 +84,68 @@ public class ChunkController : MonoBehaviour
         {
             return EBlockType.Sand;
         }
-            
     }
 
-    public IEnumerator LazyGenerateChunk()
+    public void GenerateChunkToPosition(Vector3 pos)
     {
+        if (IsLoading)
+        {
+            Debug.LogError($"[ChunkController] chunk {gameObject.name} is still loading");
+            return;
+        }
+
+        transform.position = pos;
+        gameObject.name = $"{transform.position}";
         Disable();
         InitHeightMap();
-        yield return LazyUpdateChunk();
+        StartCoroutine(GenerateChunkCoroutine());
     }
 
-    public IEnumerator LazyUpdateChunk()
+    public void UpdateChunk()
     {
-        nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-        var meshDataList = new List<(Vector3, MeshData)>();
-        var meshDataList_trans = new List<(Vector3, MeshData)>();
-        var meshDataList_col = new List<(Vector3, MeshData)>();
+        if (IsLoading)
+        {
+            Debug.LogError($"[ChunkController] chunk {gameObject.name} is still loading");
+            return;
+        }
+
+        StartCoroutine(GenerateChunkCoroutine());
+    }
+
+    private IEnumerator GenerateChunkCoroutine()
+    {
+        IsLoading = true;
+
+        var updateChunkTask = Task.Run(GenerateChunkMeshData);
+        while (!updateChunkTask.IsCompletedSuccessfully)
+            yield return null;
+
+        if (normalMesh != null)
+        {
+            normalMeshFilter.mesh = normalMesh.ToMesh();
+            normalMeshFilter.gameObject.SetActive(true);
+        }
+
+        if (transparentMesh != null)
+        {
+            transparentMeshFilter.mesh = transparentMesh.ToMesh();
+            transparentMeshFilter.gameObject.SetActive(true);
+        }
+
+        if (colliderMesh != null)
+        {
+            meshCollider.sharedMesh = colliderMesh.ToMesh();
+            meshCollider.enabled = true;
+        }
+
+        IsLoading = false;
+    }
+
+    private void GenerateChunkMeshData()
+    {
+        var meshDataList = new List<MeshData>();
+        var meshDataList_trans = new List<MeshData>();
+        var meshDataList_col = new List<MeshData>();
 
         for (int x = 0; x < Consts.ChunkSize; ++x)
         {
@@ -121,100 +169,60 @@ public class ChunkController : MonoBehaviour
                     if (meshType == VoxelConfig.EMPTY_MESH_TYPE)
                         continue;
 
-                    var meshData = voxelConfig.GetMeshData(blockData.Type, meshType);
+                    var configMeshData = voxelConfig.GetMeshData(blockData.Type, meshType);
+                    var meshData = configMeshData.CopyToPosition(new Vector3(x, y, z));
 
-                    var pos = new Vector3(x, y, z);
                     if (blockData.IsTransparent)
-                        meshDataList_trans.Add((pos, meshData));
+                        meshDataList_trans.Add(meshData);
                     else
-                        meshDataList.Add((pos, meshData));
+                        meshDataList.Add(meshData);
 
                     if(blockData.IsSolid)
-                        meshDataList_col.Add((pos, meshData));
-
-                    //yield return S();
+                        meshDataList_col.Add(meshData);
                 }
             }
         }
 
         // mesh
-        if (meshDataList.Count > 0)
-        {
-            Mesh mesh = new Mesh();
-            yield return MergeMeshData(meshDataList, mesh);
-            normalMeshFilter.mesh = mesh;
-            normalMeshFilter.gameObject.SetActive(true);
-        }
-
-        // transparent mesh
-        if (meshDataList_trans.Count > 0)
-        {
-            Mesh mesh = new Mesh();
-            yield return MergeMeshData(meshDataList_trans, mesh);
-            transparentMeshFilter.mesh = mesh;
-            transparentMeshFilter.gameObject.SetActive(true);
-        }
-
+        normalMesh = (meshDataList.Count > 0) ? MergeMeshData(meshDataList) : null;
         // collider mesh
-        if (meshDataList_col.Count > 0)
-        {
-            Mesh mesh = new Mesh();
-            yield return MergeMeshData(meshDataList_col, mesh, false);
-            meshCollider.sharedMesh = mesh;
-            meshCollider.gameObject.SetActive(true);
-        }
+        transparentMesh = (meshDataList_trans.Count > 0) ? MergeMeshData(meshDataList_trans) : null;
+        // transparent mesh
+        colliderMesh = (meshDataList_col.Count > 0) ? MergeMeshData(meshDataList_col, false) : null;
     }
 
-    IEnumerator MergeMeshData(List<(Vector3, MeshData)> meshDataList, Mesh mesh, bool hasUV = true)
+    private MeshData MergeMeshData(List<MeshData> meshDataList, bool hasUV = true)
     {
-        int vertexCount = meshDataList.Sum(m => m.Item2.Vertices.Length);
+        int vertexCount = meshDataList.Sum(m => m.Vertices.Length);
         var vertices = new Vector3[vertexCount];
         var triangles = new int[vertexCount / Consts.VoxelFaceVertexCount * Consts.VoxelFaceTriangleCount];
-        var uv = new Vector2[vertexCount];
+        var uv = hasUV? new Vector2[vertexCount] : null;
 
-        int vIndex = 0;
+        int lastVertexIndex = 0;
         int tIndex = 0;
 
-        foreach (var (pos, meshData) in meshDataList)
+        foreach (var meshData in meshDataList)
         {
-            var lastVoxelVertexIndex = vIndex;
-
-            for (int i = 0; i < meshData.Vertices.Length; ++i)
-            {
-                vertices[vIndex] = meshData.Vertices[i] + pos;
-                ++vIndex;
-            }
+            Array.Copy(meshData.Vertices, 0, vertices, lastVertexIndex, meshData.Vertices.Length);
 
             if (hasUV)
-                Array.Copy(meshData.UV, 0, uv, lastVoxelVertexIndex, meshData.UV.Length);
+                Array.Copy(meshData.UV, 0, uv, lastVertexIndex, meshData.UV.Length);
 
             for (int i = 0; i < meshData.Triangles.Length; ++i)
             {
-                triangles[tIndex] = meshData.Triangles[i] + lastVoxelVertexIndex;
+                triangles[tIndex] = meshData.Triangles[i] + lastVertexIndex;
                 ++tIndex;
             }
 
+            lastVertexIndex += meshData.Vertices.Length;
         }
-        yield return null;
 
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        if (hasUV)
-            mesh.uv = uv;
-        mesh.RecalculateNormals();
-    }
-
-    IEnumerator S()
-    {
-        if (Time.realtimeSinceStartup > nextInterruptTime)
+        return new MeshData()
         {
-            nextInterruptTime = Time.realtimeSinceStartup + lazyLoadingTimePerFrame;
-            yield return null;
-        }
+            Vertices = vertices,
+            Triangles = triangles,
+            UV = uv
+        };
     }
 
-    void Update()
-    {
-        
-    }
 }

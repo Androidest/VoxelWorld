@@ -10,11 +10,13 @@ namespace Assets.Script.Manager
 {
     public class ChunksManager : MonoBehaviorSingletonBase<ChunksManager>
     {
+        private Transform activeChunksTrans;
         private PlayerController targetPlayer;
         
         private StackPool<ChunkController> pool;
         private Dictionary<Vector3Int, ChunkController> activeChunks;
-        private Transform world;
+        private Transform worldTrans;
+        private Transform poolTrans;
         private Vector3Int lastStayChunkPos;
         private bool IsInit;
         private bool IsChunksLoading;
@@ -27,12 +29,22 @@ namespace Assets.Script.Manager
 
         public void Start()
         {
-            world = transform.parent;
+            worldTrans = transform.parent;
+
+            var poolContainer = new GameObject("ChunkPool");
+            poolContainer.transform.parent = worldTrans;
+            poolTrans = poolContainer.transform;
+
+            var chunkContainer = new GameObject("ActiveChunks");
+            chunkContainer.transform.parent = worldTrans;
+            activeChunksTrans = chunkContainer.transform;
+
             targetPlayer = GameManager.Instance.CurPlayerController;
             activeChunks = new Dictionary<Vector3Int, ChunkController>();
             IsInit = false;
 
-            pool = new StackPool<ChunkController>(70,
+            pool = new StackPool<ChunkController>(
+                (int)Mathf.Pow((Consts.ViewDistanceInChunks + 1) * 2, 2),
                 OnCreateChunk,
                 OnGetChunkFromPool,
                 OnReleaseChunkToPool,
@@ -52,19 +64,19 @@ namespace Assets.Script.Manager
         private void OnGetChunkFromPool(ChunkController chunkController)
         {
             chunkController.gameObject.SetActive(true);
-            chunkController.transform.SetParent(world, false);
+            chunkController.transform.SetParent(activeChunksTrans, false);
         }
 
         private void OnReleaseChunkToPool(ChunkController chunkController)
         {
             chunkController.gameObject.SetActive(false);
-            chunkController.transform.parent = null;
+            chunkController.transform.parent = poolTrans;
         }
 
         private void OnDestroyChunk(ChunkController chunkController)
         {
             chunkController.gameObject.SetActive(false);
-            Destroy(chunkController);
+            Destroy(chunkController.gameObject);
         }
 
         #endregion
@@ -112,20 +124,35 @@ namespace Assets.Script.Manager
             chunksToCreate.Sort((a, b) => (Mathf.Abs(a.x - center.x) + Mathf.Abs(a.z - center.z)) 
                                          - (Mathf.Abs(b.x - center.x) + Mathf.Abs(b.z - center.z)));
 
+            if (NeedInterruptAndRegenerate)
+                yield break;
+
             yield return null;
 
+            var loadingChunks = new List<ChunkController>();
             foreach (var pos in chunksToCreate)
             {
                 var chunkController = pool.Get();
                 activeChunks.Add(pos, chunkController);
 
-                chunkController.gameObject.name = $"{pos}";
-                chunkController.transform.position = pos;
-                yield return chunkController.LazyGenerateChunk();
+                chunkController.GenerateChunkToPosition(pos);
+                loadingChunks.Add(chunkController);
+
+                while(loadingChunks.Count >= 8)
+                {
+                    yield return null;
+                    loadingChunks = loadingChunks.Where(chunk => chunk.IsLoading).ToList();
+                }
 
                 // check if need interruption and regenerate
                 if (NeedInterruptAndRegenerate)
-                    yield break;
+                    break;
+            }
+
+            while (loadingChunks.Count > 0)
+            {
+                yield return null;
+                loadingChunks = loadingChunks.Where(chunk => chunk.IsLoading).ToList();
             }
         }
 
